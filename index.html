@@ -1,0 +1,79 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Key Check</title>
+<style>
+:root{--bg:#f6f5f2;--card:#fff;--fg:#1f1d1a;--mute:#86817a;--faint:#b9b4ac;--line:#e6e2db;
+--red:#c2410c;--red-bg:#fff1e8;--red-line:#f3c4a6;--green:#2f7d4f;--green-bg:#eaf5ee;--amber:#9a6a0b;--amber-bg:#fbf3df;
+--mono:ui-monospace,"SF Mono",Menlo,monospace}
+@media (prefers-color-scheme:dark){:root{--bg:#111110;--card:#1a1918;--fg:#ebe8e3;--mute:#9a958e;--faint:#5f5b56;--line:#2a2826;
+--red:#fb8f5a;--red-bg:#2c1a12;--red-line:#5a2e1b;--green:#6cc890;--green-bg:#14261b;--amber:#e3b453;--amber-bg:#2a2311}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.55 -apple-system,BlinkMacSystemFont,"PingFang TC",sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:680px;margin:0 auto;padding:30vh 16px 80px;transition:padding .35s ease}
+main.has{padding-top:56px}
+h1{font-size:22px;font-weight:600;letter-spacing:-.01em;margin:0 0 16px;text-align:center}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px;box-shadow:0 1px 2px rgba(0,0,0,.03),0 8px 24px rgba(0,0,0,.04);transition:border-color .15s}
+.box:focus-within{border-color:var(--mute)}
+#text{display:block;width:100%;min-height:52px;max-height:40vh;resize:none;border:0;outline:none;background:transparent;color:var(--fg);font:14px/1.6 var(--mono);padding:14px 16px}
+#text::placeholder{color:var(--faint)}
+.sub{text-align:center;font-size:12px;color:var(--faint);margin-top:10px}
+#out{margin-top:28px;display:grid;gap:10px}
+.sum{border-radius:10px;padding:10px 14px;font-weight:600;font-size:13px}
+.sum.valid{background:var(--red-bg);color:var(--red)}.sum.dead{background:var(--green-bg);color:var(--green)}.sum.unknown{background:var(--amber-bg);color:var(--amber)}
+.res{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;animation:in .25s ease both}
+.res.valid{border-color:var(--red-line);box-shadow:inset 3px 0 0 var(--red)}
+.res.dead{opacity:.72}
+@keyframes in{from{opacity:0;transform:translateY(4px)}}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.badge{font-size:12px;font-weight:650;padding:2px 9px;border-radius:6px;white-space:nowrap}
+.badge.valid{color:var(--red);background:var(--red-bg)}.badge.dead{color:var(--green);background:var(--green-bg)}.badge.unknown{color:var(--amber);background:var(--amber-bg)}
+.svc{font-weight:600}.key{font:12.5px var(--mono);color:var(--mute)}
+dl{margin:10px 0 0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:12.5px}
+dl:empty{display:none}
+dt{color:var(--faint)}dd{margin:0;font-family:var(--mono);color:var(--mute);overflow-wrap:anywhere}
+.skel{height:56px;border-radius:12px;background:linear-gradient(90deg,var(--card),var(--line),var(--card));background-size:200% 100%;animation:sh 1.2s infinite linear}
+@keyframes sh{to{background-position:-200% 0}}
+@media (max-width:560px){main{padding-top:22vh}dl{grid-template-columns:1fr}dt{margin-top:4px}}
+</style></head><body><main id="main">
+<h1>檢查外洩的 API key</h1>
+<div class="box"><textarea id="text" rows="1" placeholder="貼上 key，可多行；連變數名一起貼辨識率較高" spellcheck="false" autocomplete="off" autofocus></textarea></div>
+<div class="sub">由 TruffleHog 在本機檢查 · 不留存</div>
+<div id="out"></div>
+</main><script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const LABEL={valid:'仍有效',dead:'已失效',unknown:'無法判斷'};
+const ta=$('#text');let composing=false,compEnd=0;
+const grow=()=>{ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';};
+ta.addEventListener('input',grow);
+ta.addEventListener('compositionstart',()=>composing=true);
+ta.addEventListener('compositionend',()=>{composing=false;compEnd=Date.now();});
+ta.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||e.shiftKey)return;
+  if(e.isComposing||composing||e.keyCode===229||Date.now()-compEnd<100)return;
+  e.preventDefault();submit();
+});
+ta.addEventListener('paste',()=>setTimeout(submit,0));
+
+async function submit(){
+  const text=ta.value.trim(); if(!text)return;
+  ta.value='';grow();
+  $('#main').classList.add('has');
+  $('#out').innerHTML='<div class="skel"></div>';
+  const r=await fetch('/scan',{method:'POST',headers:{'Content-Type':'application/json','X-Key-Check':'1'},body:JSON.stringify({text})}).then(x=>x.json());
+  const rs=r.results.sort((a,b)=>['valid','unknown','dead'].indexOf(a.state)-['valid','unknown','dead'].indexOf(b.state));
+  const n=s=>rs.filter(x=>x.state===s).length;
+  let h='';
+  if(rs.length>1||r.unrecognized.length){
+    if(n('valid'))h+='<div class="sum valid">'+n('valid')+' 把仍有效，建議立刻撤銷</div>';
+    else if(n('unknown'))h+='<div class="sum unknown">'+n('unknown')+' 把無法判斷'+(n('dead')?'，'+n('dead')+' 把已失效':'')+'</div>';
+    else if(rs.length)h+='<div class="sum dead">認得的 key 全部已失效</div>';
+  }
+  h+=rs.map(x=>{
+    let dl=Object.entries(x.extra||{}).map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd>').join('');
+    if(x.error)dl+='<dt>錯誤</dt><dd>'+esc(x.error)+'</dd>';
+    return '<div class="res '+x.state+'"><div class="top"><span class="badge '+x.state+'">'+LABEL[x.state]+'</span><span class="svc">'+esc(x.service)+'</span><span class="key">'+esc(x.key)+'</span></div><dl>'+dl+'</dl></div>';
+  }).join('');
+  h+=r.unrecognized.map(k=>'<div class="res unknown"><div class="top"><span class="badge unknown">認不出</span><span class="key">'+esc(k)+'</span></div><dl><dt>說明</dt><dd>TruffleHog 不認得這種 key，請到該服務後台確認</dd></dl></div>').join('');
+  $('#out').innerHTML=h;
+}
+</script></body></html>
