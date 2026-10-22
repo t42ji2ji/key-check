@@ -1,79 +1,259 @@
 <!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Key Check</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f6f5f2;--card:#fff;--fg:#1f1d1a;--mute:#86817a;--faint:#b9b4ac;--line:#e6e2db;
---red:#c2410c;--red-bg:#fff1e8;--red-line:#f3c4a6;--green:#2f7d4f;--green-bg:#eaf5ee;--amber:#9a6a0b;--amber-bg:#fbf3df;
---mono:ui-monospace,"SF Mono",Menlo,monospace}
-@media (prefers-color-scheme:dark){:root{--bg:#111110;--card:#1a1918;--fg:#ebe8e3;--mute:#9a958e;--faint:#5f5b56;--line:#2a2826;
---red:#fb8f5a;--red-bg:#2c1a12;--red-line:#5a2e1b;--green:#6cc890;--green-bg:#14261b;--amber:#e3b453;--amber-bg:#2a2311}}
+:root{--card:rgba(13,16,22,.74);--fg:#e6ebf2;--mute:#94a0b2;--faint:#5c6878;--line:rgba(255,255,255,.09);--chip:rgba(255,255,255,.045);
+--red:#f87171;--red-bg:rgba(248,113,113,.12);--green:#4ade80;--green-bg:rgba(74,222,128,.1);--amber:#fbbf24;--amber-bg:rgba(251,191,36,.1);
+--mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,monospace}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.55 -apple-system,BlinkMacSystemFont,"PingFang TC",sans-serif;-webkit-font-smoothing:antialiased}
-main{max-width:680px;margin:0 auto;padding:30vh 16px 80px;transition:padding .35s ease}
-main.has{padding-top:56px}
+body{margin:0;min-height:100vh;background:#000;color:var(--fg);font:14px/1.55 -apple-system,BlinkMacSystemFont,"PingFang TC",sans-serif;-webkit-font-smoothing:antialiased}
+#sea{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;font-family:var(--mono)}
+/* 還沒結果時整組垂直置中，貼了 key 往上下兩邊長；有結果後靠上 */
+main{position:relative;max-width:680px;min-height:100vh;margin:0 auto;padding:40px 16px 100px;display:flex;flex-direction:column;justify-content:center}
+main.has{justify-content:flex-start;padding-top:56px}
 h1{font-size:22px;font-weight:600;letter-spacing:-.01em;margin:0 0 16px;text-align:center}
-.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px;box-shadow:0 1px 2px rgba(0,0,0,.03),0 8px 24px rgba(0,0,0,.04);transition:border-color .15s}
-.box:focus-within{border-color:var(--mute)}
-#text{display:block;width:100%;min-height:52px;max-height:40vh;resize:none;border:0;outline:none;background:transparent;color:var(--fg);font:14px/1.6 var(--mono);padding:14px 16px}
+@property --k{syntax:"<number>";inherits:true;initial-value:0}
+.box,.res{--lo:var(--line);--hi:rgba(255,255,255,.24);--bd:color-mix(in srgb,var(--hi) calc(var(--k)*100%),var(--lo));background:var(--card);border:1px solid var(--bd);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.box{position:relative;border-radius:0;padding:4px;transition:--k .15s}
+.cn{position:absolute;width:11px;height:11px;pointer-events:none}.cn.a{top:-6px;left:-6px}.cn.b{top:-6px;right:-6px}.cn.c{bottom:-6px;left:-6px}.cn.d{bottom:-6px;right:-6px}
+.cn::before,.cn::after{content:"";position:absolute;background:var(--bd)}.cn::before{left:0;right:0;top:5px;height:1px}.cn::after{top:0;bottom:0;left:5px;width:1px}
+.res:hover{--k:1;animation:in .25s ease both,flick .4s linear}
+@keyframes flick{0%{--k:1}18%{--k:.1}36%{--k:1}54%{--k:.1}72%,100%{--k:1}}
+.pr{flex:none;align-self:flex-start;padding:14px 0 0 16px;font:14px/1.6 var(--mono);color:var(--faint)}
+.box:focus-within .pr{color:var(--green)}
+.box:focus-within{--k:1}
+#text{display:block;width:100%;min-height:52px;max-height:40vh;resize:none;border:0;outline:none;background:transparent;color:var(--fg);font:14px/1.6 var(--mono);padding:14px 16px 14px 10px}
 #text::placeholder{color:var(--faint)}
-.sub{text-align:center;font-size:12px;color:var(--faint);margin-top:10px}
-#out{margin-top:28px;display:grid;gap:10px}
-.sum{border-radius:10px;padding:10px 14px;font-weight:600;font-size:13px}
-.sum.valid{background:var(--red-bg);color:var(--red)}.sum.dead{background:var(--green-bg);color:var(--green)}.sum.unknown{background:var(--amber-bg);color:var(--amber)}
-.res{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;animation:in .25s ease both}
-.res.valid{border-color:var(--red-line);box-shadow:inset 3px 0 0 var(--red)}
-.res.dead{opacity:.72}
+.inrow{display:flex;align-items:flex-end}
+#go,#inst{flex:none;margin:8px;height:36px;min-width:72px;padding:0 14px;border:0;border-radius:5px;background:var(--fg);color:#111;font:600 13px var(--mono);cursor:pointer;transition:opacity .15s,transform .1s}
+#go:active,#inst:active{transform:scale(.97)}
+#go:disabled,#inst:disabled{opacity:.3;cursor:default}
+#go.busy,#inst.busy{opacity:1;background:var(--chip);color:var(--mute);border:1px solid var(--line)}
+#chips{display:flex;flex-direction:column;gap:6px;padding:10px 10px 0}
+#chips:empty{display:none}
+.chip{display:flex;align-items:center;gap:8px;background:var(--chip);border:1px dashed var(--line);border-radius:4px;padding:5px 4px 5px 12px;font:12.5px var(--mono);animation:in .2s ease both}
+.chip span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip button{border:0;background:none;color:var(--mute);cursor:pointer;font-size:15px;line-height:1;padding:3px 7px;border-radius:5px}
+.chip button:hover{background:var(--line);color:var(--fg)}
+#tick{margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px;font:12px var(--mono);color:var(--mute)}
+#tick .tl{width:20px;height:20px;border-radius:4px;background:#fff;display:grid;place-items:center}#tick .tl img{width:14px;height:14px}
+#tick .tn{font:600 15px var(--mono);color:var(--fg)}
+#sum{margin-top:24px;font-size:12.5px;color:var(--mute);display:flex;gap:14px;flex-wrap:wrap}
+#sum:empty{display:none}
+#sum b{font-weight:600;color:var(--fg)}
+#sum .bar{flex-basis:100%;font:12px var(--mono);letter-spacing:1px;color:var(--faint)}
+.c-valid{color:var(--green)}.c-dead{color:var(--red)}.c-unknown{color:var(--amber)}.c-unrecognized{color:var(--faint)}
+#out{margin-top:12px;display:grid;gap:10px}
+.res{position:relative;border-radius:0;padding:14px 16px;animation:in .25s ease both}
+.res.valid{--lo:rgba(74,222,128,.28);--hi:rgba(74,222,128,.75)}.res.dead{--lo:rgba(248,113,113,.28);--hi:rgba(248,113,113,.75)}
 @keyframes in{from{opacity:0;transform:translateY(4px)}}
-.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.badge{font-size:12px;font-weight:650;padding:2px 9px;border-radius:6px;white-space:nowrap}
-.badge.valid{color:var(--red);background:var(--red-bg)}.badge.dead{color:var(--green);background:var(--green-bg)}.badge.unknown{color:var(--amber);background:var(--amber-bg)}
-.svc{font-weight:600}.key{font:12.5px var(--mono);color:var(--mute)}
-dl{margin:10px 0 0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:12.5px}
-dl:empty{display:none}
-dt{color:var(--faint)}dd{margin:0;font-family:var(--mono);color:var(--mute);overflow-wrap:anywhere}
-.skel{height:56px;border-radius:12px;background:linear-gradient(90deg,var(--card),var(--line),var(--card));background-size:200% 100%;animation:sh 1.2s infinite linear}
-@keyframes sh{to{background-position:-200% 0}}
-@media (max-width:560px){main{padding-top:22vh}dl{grid-template-columns:1fr}dt{margin-top:4px}}
-</style></head><body><main id="main">
-<h1>檢查外洩的 API key</h1>
-<div class="box"><textarea id="text" rows="1" placeholder="貼上 key，可多行；連變數名一起貼辨識率較高" spellcheck="false" autocomplete="off" autofocus></textarea></div>
-<div class="sub">由 TruffleHog 在本機檢查 · 不留存</div>
-<div id="out"></div>
-</main><script>
+.row{display:flex;align-items:center;gap:12px}
+.logo{flex:none;width:36px;height:36px;border-radius:6px;background:#fff;display:grid;place-items:center;overflow:hidden;font:600 15px var(--mono);color:#111}
+.logo img{width:22px;height:22px}
+.logo.none{background:var(--chip);border:1px solid var(--line);color:var(--mute)}
+.id{flex:1;min-width:0}
+.name{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note{font-weight:400;font-size:12px;color:var(--mute);margin-left:6px}
+.key{font:12px var(--mono);color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st{flex:none;font:600 12.5px var(--mono);padding:4px 8px;border-radius:4px;white-space:pre}
+.st::before{content:"[ "}.st::after{content:" ]"}
+.st.valid{color:var(--green);background:var(--green-bg)}.st.dead{color:var(--red);background:var(--red-bg)}
+.st.unknown{color:var(--amber);background:var(--amber-bg)}.st.unrecognized,.st.wait{color:var(--mute);background:var(--chip)}
+.hint{margin:10px 0 0 48px;font-size:12.5px;color:var(--mute)}
+.foot{display:flex;align-items:center;gap:16px;margin:12px 0 0 48px;font-size:12.5px}
+.foot:empty{display:none}
+.foot a{color:var(--fg);text-decoration:none;border-bottom:1px dashed var(--faint)}
+.foot a:hover{border-color:var(--fg)}
+.more{margin-left:auto;border:0;background:none;color:var(--mute);font:inherit;cursor:pointer;padding:0}
+.more:hover{color:var(--fg)}
+.more{font-family:var(--mono)}.more::before{content:"+ "}.res.open .more::before{content:"- "}
+dl{display:none;margin:12px 0 0 48px;padding-top:10px;border-top:1px dashed var(--line);grid-template-columns:auto 1fr;gap:4px 14px;font-size:12px}
+.res.open dl{display:grid}
+dt{color:var(--faint)}dd{margin:0;font-family:var(--mono);color:var(--mute);overflow-wrap:anywhere}dd a{color:var(--mute)}
+.scr{font-family:var(--mono);color:var(--faint)}
+#setup{margin-bottom:12px;transition:opacity .4s}
+#setup[hidden]{display:none}#setup.gone{opacity:0}
+#inst{margin:0}
+#setup .bar{font:12px var(--mono);color:var(--mute);white-space:pre}
+#setup.err .key{color:var(--red)}
+@media (max-width:560px){.hint,.foot,dl{margin-left:0}dl{grid-template-columns:1fr}dt{margin-top:4px}}
+</style></head><body><canvas id="sea"></canvas><main id="main">
+<h1 data-t="title"></h1>
+<div id="setup" class="res" hidden><i class="cn a"></i><i class="cn b"></i><i class="cn c"></i><i class="cn d"></i><div class="row"><div class="logo none">!</div><div class="id"><div class="name" data-t="missing"></div><div class="key" id="smsg" data-t="needs"></div></div><button id="inst" data-t="install"></button></div>
+<div class="hint" id="shint" data-t="instHint"></div></div>
+<div class="box"><i class="cn a"></i><i class="cn b"></i><i class="cn c"></i><i class="cn d"></i><div id="chips"></div><div class="inrow"><span class="pr">&gt;</span><textarea id="text" rows="1" spellcheck="false" autocomplete="off" autofocus></textarea><button id="go" disabled data-t="check"></button></div></div>
+<div id="tick"><span data-t="sup"></span><span class="tl"><img alt=""></span><span class="tn">GitHub</span><span data-t="more800"></span></div><div id="sum"></div><div id="out"></div>
+</main><script type="module">import{OceanEngine}from'/sharks.js';
+const kinds=['classic','hammerhead','zebra','tiger','greathammer','mako','thresher','nurse'].sort(()=>Math.random()-.5).slice(0,4);
+new OceanEngine($('#sea'),kinds.map((kind,i)=>({kind,size:1-i*.1})));</script><script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
-const LABEL={valid:'仍有效',dead:'已失效',unknown:'無法判斷'};
+// 介面以英文為主，瀏覽器語言是中文時顯示中文
+const ZH=/^zh/i.test(navigator.language);
+const T=ZH?{
+  title:'檢查外洩的 API key',missing:'還沒安裝 TruffleHog',needs:'key-check 靠它辨識和驗證 key',install:'安裝',
+  instHint:'從 GitHub 官方 release 下載，比對 SHA-256 後放到 ~/.cache/key-check/bin，不需要 sudo。',
+  noBuild:'這個平台沒有現成的版本，請照 <a href="https://github.com/trufflesecurity/trufflehog#floppy_disk-installation" target="_blank">官方說明</a> 安裝後重新整理。',
+  ph:'貼上 key，可多行；連變數名一起貼辨識率較高',ph2:'再貼一把，或按 Enter 檢查',check:'檢查',checking:'檢查中',sup:'支援',more800:'等 800 多種服務',
+  del:'刪除',err:'錯誤',revoke:'撤銷 key ↗',usage:'用量 ↗',unknownSvc:'未知服務',more:'詳細',noTH:'找不到 TruffleHog',noSrv:'連不上本機服務',total:n=>'共 <b>'+n+'</b> 把',
+  release:'查詢最新版本',verify:'比對 SHA-256',extract:'解壓縮',download:'下載',failed:'安裝失敗：',retry:'重試',installed:'TruffleHog 已安裝',
+  LABEL:{valid:'仍可使用',dead:'已失效',unknown:'無法確認',unrecognized:'無法辨識'},
+  HINT:{valid:'這把 key 現在還能呼叫 API。',dead:'已被撤銷或無效，現在用不了。',unknown:'驗證時出錯，沒辦法確定還能不能用。',unrecognized:'TruffleHog 不認得這種格式，請到該服務後台確認。'},
+}:{
+  title:'Check leaked API keys',missing:'TruffleHog is not installed',needs:'key-check uses it to detect and verify keys',install:'Install',
+  instHint:'Downloads the official GitHub release, checks its SHA-256 and puts it in ~/.cache/key-check/bin. No sudo needed.',
+  noBuild:'No prebuilt binary for this platform. Install it with the <a href="https://github.com/trufflesecurity/trufflehog#floppy_disk-installation" target="_blank">official guide</a>, then reload.',
+  ph:'Paste keys, one per line. NAME=value works best',ph2:'Paste another, or press Enter to check',check:'Check',checking:'Checking',sup:'Supports',more800:'and 800+ more',
+  del:'Remove',err:'Error',revoke:'Revoke key ↗',usage:'Usage ↗',unknownSvc:'Unknown service',more:'Details',noTH:'TruffleHog not found',noSrv:"Can't reach the local server",total:n=>'<b>'+n+'</b> keys',
+  release:'Finding the latest release',verify:'Checking SHA-256',extract:'Extracting',download:'Downloading',failed:'Install failed: ',retry:'Retry',installed:'TruffleHog installed',
+  LABEL:{valid:'Live',dead:'Dead',unknown:'Unknown',unrecognized:'Unrecognized'},
+  HINT:{valid:'This key can still call the API.',dead:'Revoked or invalid. It no longer works.',unknown:"Verification hit an error, so it's unclear whether the key still works.",unrecognized:"TruffleHog doesn't recognize this format. Check the provider's dashboard."},
+};
+document.documentElement.lang=ZH?'zh-Hant':'en';
+for(const el of document.querySelectorAll('[data-t]'))el.innerHTML=T[el.dataset.t];
+const LABEL=T.LABEL,HINT=T.HINT;
 const ta=$('#text');let composing=false,compEnd=0;
 const grow=()=>{ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';};
-ta.addEventListener('input',grow);
+const go=$('#go');let busy=false;
+let missing=false;
+const sync=()=>{go.disabled=busy||missing||!(keys.length||ta.value.trim());};
+ta.addEventListener('input',()=>{grow();sync();});
 ta.addEventListener('compositionstart',()=>composing=true);
 ta.addEventListener('compositionend',()=>{composing=false;compEnd=Date.now();});
+ta.placeholder=T.ph;const chips=$('#chips'),PH=T.ph;let keys=[];
+const render=()=>{chips.innerHTML=keys.map((k,i)=>'<div class="chip"><span>'+esc(k)+'</span><button data-i="'+i+'" aria-label="'+T.del+'">×</button></div>').join('');ta.placeholder=keys.length?T.ph2:PH;sync();};
+chips.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;keys.splice(+b.dataset.i,1);render();ta.focus();});
+// 一行一把；私鑰 PEM、整份 JSON 各算一把
+const PEM=/-----BEGIN[\s\S]*?-----END[^\n]*/g;
+ta.addEventListener('paste',e=>{
+  const t=e.clipboardData.getData('text');let parts;
+  try{JSON.parse(t);parts=t.trim().startsWith('{')?[t.trim()]:null;}catch{}
+  parts??=[...(t.match(PEM)||[]),...t.replace(PEM,'\n').split('\n')].map(x=>x.trim()).filter(Boolean);
+  if(!parts.length||(parts.length===1&&ta.value.trim()))return;
+  e.preventDefault();for(const k of parts)if(!keys.includes(k))keys.push(k);render();
+});
 ta.addEventListener('keydown',e=>{
+  if(e.key==='Backspace'&&!ta.value&&keys.length){keys.pop();render();return;}
   if(e.key!=='Enter'||e.shiftKey)return;
   if(e.isComposing||composing||e.keyCode===229||Date.now()-compEnd<100)return;
   e.preventDefault();submit();
 });
-ta.addEventListener('paste',()=>setTimeout(submit,0));
+
+// 主流服務的 logo：用後台網址的網域抓 favicon
+const NAME={github:'GitHub',gitlab:'GitLab',aws:'AWS',gcp:'Google Cloud',googleapikey:'Google API',huggingface:'Hugging Face',sendgrid:'SendGrid',openrouter:'OpenRouter',elevenlabs:'ElevenLabs',deepseek:'DeepSeek',dockerhub:'Docker Hub',npm:'npm',cloudflareapitoken:'Cloudflare',telegrambottoken:'Telegram Bot',discordbottoken:'Discord Bot',googlegeminiapikey:'Gemini'};
+const LOGO_DOMAIN={gemini:'gemini.google.com',googlegeminiapikey:'gemini.google.com'};
+const logo=x=>{
+  if(!x.service)return '<div class="logo none">?</div>';
+  const d=LOGO_DOMAIN[x.service.toLowerCase().replace(/[^a-z0-9]/g,'')]||(x.links&&new URL(x.links.revoke).hostname.split('.').slice(-2).join('.'));
+  return d?'<div class="logo"><img src="https://www.google.com/s2/favicons?domain='+d+'&sz=64" alt=""></div>':'<div class="logo none">'+esc(x.service[0])+'</div>';
+};
+const CN='<i class="cn a"></i><i class="cn b"></i><i class="cn c"></i><i class="cn d"></i>';
+const mask=k=>{const v=k.includes('=')&&!k.startsWith('{')?k.split('=').slice(1).join('=').trim():k;return v.length>14?v.slice(0,6)+'…'+v.slice(-4):'••••';};
+const card=x=>{
+  let dl=Object.entries(x.extra||{}).map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+(/^https?:\/\/\S+$/.test(v)?'<a href="'+esc(v)+'" target="_blank">'+esc(v)+'</a>':esc(v))+'</dd>').join('');
+  if(x.error)dl+='<dt>'+T.err+'</dt><dd>'+esc(x.error)+'</dd>';
+  const links=x.links?(x.state==='dead'?'':'<a href="'+x.links.revoke+'" target="_blank">'+T.revoke+'</a>')+(x.links.usage?'<a href="'+x.links.usage+'" target="_blank">'+T.usage+'</a>':''):'';
+  return '<div class="res '+x.state+'">'+CN+'<div class="row">'+logo(x)+'<div class="id"><div class="name">'+esc(NAME[(x.service||'').toLowerCase().replace(/[^a-z0-9]/g,'')]||x.service||T.unknownSvc)+(x.note?'<span class="note">'+esc(x.note)+'</span>':'')+'</div><div class="key">'+esc(x.key)+'</div></div><div class="st '+x.state+'">'+LABEL[x.state]+'</div></div>'
+    +'<div class="hint">'+HINT[x.state]+'</div>'
+    +(links||dl?'<div class="foot">'+links+(dl?'<button class="more">'+T.more+'</button>':'')+'</div>':'')+(dl?'<dl>'+dl+'</dl>':'')+'</div>';
+};
+$('#out').addEventListener('click',e=>{const b=e.target.closest('.more');if(b)b.closest('.res').classList.toggle('open');});
+
+// 檢查中：ASCII 亂碼，跟背景鯊魚同一套字
+const GLYPH=':;t%SX8#@o';let scrT=0;
+const junk=n=>Array.from({length:n},()=>GLYPH[Math.random()*GLYPH.length|0]).join('');
+const scramble=()=>{for(const el of document.querySelectorAll('.scr'))el.textContent=junk(+el.dataset.n);};
+go.addEventListener('click',submit);
+go.addEventListener('mouseenter',()=>{if(go.disabled)return;let f=0;const t=setInterval(()=>{go.textContent=++f<6?junk(4):T.check;if(f>=6)clearInterval(t);},45);});
+const decode=root=>{for(const el of root.querySelectorAll('.name,.st')){
+  const nodes=[...el.childNodes].filter(x=>x.nodeType===3),fin=nodes.map(x=>x.data);let f=0;
+  const t=setInterval(()=>{f++;nodes.forEach((x,j)=>{const k=Math.floor(fin[j].length*f/8);x.data=fin[j].slice(0,k)+junk(fin[j].length-k);});if(f>=8)clearInterval(t);},40);}};
+// 輸入框下方輪播支援的服務，換名字時用亂碼過場
+const SVC=[['GitHub','github.com'],['OpenAI','openai.com'],['Anthropic','anthropic.com'],['Gemini','gemini.google.com'],['AWS','aws.amazon.com'],['Google Cloud','cloud.google.com'],['Stripe','stripe.com'],['Slack','slack.com'],['Discord','discord.com'],['Telegram','telegram.org'],['SendGrid','sendgrid.com'],['Twilio','twilio.com'],['Hugging Face','huggingface.co'],['Cloudflare','cloudflare.com'],['GitLab','gitlab.com'],['Docker Hub','docker.com'],['OpenRouter','openrouter.ai'],['DeepSeek','deepseek.com'],['Groq','groq.com'],['ElevenLabs','elevenlabs.io'],['Mailgun','mailgun.com'],['Shopify','shopify.com'],['Notion','notion.so'],['Vercel','vercel.com']];
+const fav=d=>'https://www.google.com/s2/favicons?domain='+d+'&sz=64';
+for(const[,d]of SVC)new Image().src=fav(d);
+let svc=0;const tn=$('#tick .tn'),tl=$('#tick .tl img');tl.src=fav(SVC[0][1]);
+setInterval(()=>{const a=SVC[svc][0],[b,d]=SVC[svc=(svc+1)%SVC.length],L=Math.max(a.length,b.length);let f=0;
+  const t=setInterval(()=>{f++;const k=Math.floor(b.length*f/8);tn.textContent=b.slice(0,k)+junk(Math.max(0,Math.round(L-(L-b.length)*f/8)-k));
+    if(f===4)tl.src=fav(SVC[Math.random()*SVC.length|0][1]);if(f>=8)tl.src=fav(d);if(f>=8)clearInterval(t);},35);},1700);
+const waiting=k=>'<div class="res">'+CN+'<div class="row"><div class="logo none"><span class="scr" data-n="1"></span></div><div class="id"><div class="name"><span class="scr" data-n="'+(8+Math.random()*6|0)+'"></span></div><div class="key">'+esc(mask(k))+'</div></div><div class="st wait">'+T.checking+' <span class="scr" data-n="3"></span></div></div></div>';
 
 async function submit(){
-  const text=ta.value.trim(); if(!text)return;
-  ta.value='';grow();
-  $('#main').classList.add('has');
-  $('#out').innerHTML='<div class="skel"></div>';
-  const r=await fetch('/scan',{method:'POST',headers:{'Content-Type':'application/json','X-Key-Check':'1'},body:JSON.stringify({text})}).then(x=>x.json());
-  const rs=r.results.sort((a,b)=>['valid','unknown','dead'].indexOf(a.state)-['valid','unknown','dead'].indexOf(b.state));
-  const n=s=>rs.filter(x=>x.state===s).length;
-  let h='';
-  if(rs.length>1||r.unrecognized.length){
-    if(n('valid'))h+='<div class="sum valid">'+n('valid')+' 把仍有效，建議立刻撤銷</div>';
-    else if(n('unknown'))h+='<div class="sum unknown">'+n('unknown')+' 把無法判斷'+(n('dead')?'，'+n('dead')+' 把已失效':'')+'</div>';
-    else if(rs.length)h+='<div class="sum dead">認得的 key 全部已失效</div>';
-  }
-  h+=rs.map(x=>{
-    let dl=Object.entries(x.extra||{}).map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd>').join('');
-    if(x.error)dl+='<dt>錯誤</dt><dd>'+esc(x.error)+'</dd>';
-    return '<div class="res '+x.state+'"><div class="top"><span class="badge '+x.state+'">'+LABEL[x.state]+'</span><span class="svc">'+esc(x.service)+'</span><span class="key">'+esc(x.key)+'</span></div><dl>'+dl+'</dl></div>';
-  }).join('');
-  h+=r.unrecognized.map(k=>'<div class="res unknown"><div class="top"><span class="badge unknown">認不出</span><span class="key">'+esc(k)+'</span></div><dl><dt>說明</dt><dd>TruffleHog 不認得這種 key，請到該服務後台確認</dd></dl></div>').join('');
-  $('#out').innerHTML=h;
+  const items=[...keys,ta.value.trim()].filter(Boolean); if(!items.length||busy)return;
+  busy=true;keys=[];render();ta.value='';grow();
+  go.classList.add('busy');go.innerHTML='<span class="scr" data-n="4"></span>';
+  $('#main').classList.add('has');$('#sum').innerHTML='';
+  $('#out').innerHTML=items.map((k,i)=>'<div id="slot'+i+'">'+waiting(k)+'</div>').join('');
+  clearInterval(scrT);scramble();scrT=setInterval(scramble,70);
+  const all=await Promise.all(items.map(async(text,i)=>{
+    const r=await fetch('/scan',{method:'POST',headers:{'Content-Type':'application/json','X-Key-Check':'1'},body:JSON.stringify({text})}).then(x=>x.json()).catch(()=>({}));
+    if(r.error==='trufflehog-missing')status();
+    const rs=r.results||[{key:mask(text),service:null,state:'unknown',error:r.error==='trufflehog-missing'?T.noTH:T.noSrv,extra:{},links:null}];
+    $('#slot'+i).innerHTML=rs.map(card).join('');decode($('#slot'+i));
+    return rs;
+  }));
+  clearInterval(scrT);busy=false;go.classList.remove('busy');go.textContent=T.check;sync();ta.focus();
+  const rs=all.flat(),n=s=>rs.filter(x=>x.state===s).length;
+  const ST=['valid','dead','unknown','unrecognized'].filter(n),W=40;
+  if(rs.length>1)$('#sum').innerHTML='<span class="bar">['+ST.map(s=>'<span class="c-'+s+'">'+(s==='unrecognized'?'·':'#').repeat(Math.max(1,Math.round(n(s)/rs.length*W)))+'</span>').join('')+']</span><span>'+T.total(rs.length)+'</span>'+ST.map(s=>'<span class="c-'+s+'">'+LABEL[s]+' <b>'+n(s)+'</b></span>').join('');
 }
-</script></body></html>
+
+// 沒裝 TruffleHog：在輸入框上方提示，可一鍵安裝（伺服器端下載、驗 SHA-256、解壓）
+const setup=$('#setup'),inst=$('#inst'),smsg=$('#smsg');
+async function status(){
+  const r=await fetch('/status',{headers:{'X-Key-Check':'1'}}).then(x=>x.json()).catch(()=>null);
+  if(!r||r.trufflehog)return;
+  missing=true;sync();setup.hidden=false;
+  if(!r.installable){inst.hidden=true;$('#shint').innerHTML=T.noBuild;}
+}
+const bar=p=>'['+'#'.repeat(p/5|0)+'·'.repeat(20-(p/5|0))+'] '+p+'%';
+inst.addEventListener('click',async()=>{
+  inst.disabled=true;inst.classList.add('busy');inst.innerHTML='<span class="scr" data-n="4"></span>';
+  setup.classList.remove('err');scramble();const t=setInterval(scramble,70);
+  let ver='',ok=false,buf='';
+  const show=m=>{const[step,v]=[m.step,m.value];
+    if(step==='download'){ver=v;smsg.innerHTML=T.download+' v'+esc(v)+'　<span class="bar">'+bar(0)+'</span>';}
+    else if(step==='progress'){const b=smsg.querySelector('.bar');if(b)b.textContent=bar(v);}
+    else if(step==='done'){ok=true;}
+    else if(step==='error'){setup.classList.add('err');smsg.textContent=T.failed+v;}
+    else smsg.textContent=T[step]+(ver?' · v'+ver:'');};
+  try{
+    const r=await fetch('/install',{method:'POST',headers:{'X-Key-Check':'1'}});
+    for(const rd=r.body.getReader(),dec=new TextDecoder();;){
+      const{value,done}=await rd.read();if(done)break;
+      buf+=dec.decode(value,{stream:true});const lines=buf.split('\n');buf=lines.pop();
+      for(const l of lines)if(l)show(JSON.parse(l));
+    }
+  }catch{setup.classList.add('err');smsg.textContent=T.noSrv;}
+  clearInterval(t);inst.classList.remove('busy');
+  if(!ok){inst.disabled=false;inst.textContent=T.retry;return;}
+  $('#setup .name').textContent=T.installed;$('#setup .logo').textContent='✓';smsg.textContent='v'+ver;inst.hidden=true;
+  missing=false;sync();
+  setTimeout(()=>{setup.classList.add('gone');setTimeout(()=>setup.hidden=true,400);},1500);
+});
+status();
+</script><!-- DEV 測試鈕（DEV fake data）：網址加 #dev 才出現，塞假 key 並攔下 /scan 回假結果。上線前整段刪掉 -->
+<script>
+if(location.hash==='#dev'){
+  const R=(service,state,extra={},more={})=>({service,state,extra,...more});
+  const FAKE={
+    'GITHUB_TOKEN=ghp_FAKEa1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6':R('Github','valid',{account:'octocat',scopes:'repo, workflow',created:'2025-03-02'},{links:{revoke:'https://github.com/settings/tokens'}}),
+    'OPENROUTER_API_KEY=sk-or-v1-FAKE0000000000000000000000000000000000000000':R('OpenRouter','dead',{},{links:{revoke:'https://openrouter.ai/settings/keys',usage:'https://openrouter.ai/activity'}}),
+    'GEMINI_API_KEY=AQ.FAKEAb8RN6Ixxxxxxxxxxxxxxxxxxxxxx':R('GoogleGeminiAPIKey','dead',{},{links:{revoke:'https://aistudio.google.com/apikey'}}),
+    'AWS_SECRET=AKIAFAKEFAKEFAKE1234 wJalrXUtnFEMI/K7MDENG/bPxRfiCYFAKEKEY':R('AWS','unknown',{'account id':'123456789012'},{error:'timeout',links:{revoke:'https://console.aws.amazon.com/iam'}}),
+    'SENDGRID=SG.FAKE.FAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE':R('SendGrid','valid',{scopes:'mail.send'},{note:'mailer',links:{revoke:'https://app.sendgrid.com/settings/api_keys'}}),
+    'some-random-secret-xyz-123456789':R(null,'unrecognized'),
+  };
+  const btn=document.createElement('button');btn.textContent='DEV fake data';
+  btn.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9;border:1px dashed var(--amber);background:var(--amber-bg);color:var(--amber);font:600 12px var(--mono);padding:8px 12px;border-radius:8px;cursor:pointer';
+  btn.onclick=()=>{keys=Object.keys(FAKE);render();};
+  document.body.append(btn);
+  const f=window.fetch;
+  window.fetch=(u,o)=>{
+    const t=u==='/scan'&&JSON.parse(o.body).text;
+    if(!t||!FAKE[t])return f(u,o);
+    return new Promise(r=>setTimeout(()=>r(new Response(JSON.stringify({results:[{key:mask(t),...FAKE[t]}]}))),400+Math.random()*1400));
+  };
+}
+</script>
+</body></html>

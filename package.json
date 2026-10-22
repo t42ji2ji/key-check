@@ -4,6 +4,6 @@
   "description": "A local web UI for checking leaked API keys with TruffleHog",
   "type": "module",
   "license": "MIT",
-  "scripts": { "start": "node server.mjs" },
+  "scripts": { "start": "node server.mjs", "build:sharks": "npx -y esbuild@0.24.0 sharks/index.ts --bundle --format=esm --outfile=sharks.js" },
   "engines": { "node": ">=18" }
 }
